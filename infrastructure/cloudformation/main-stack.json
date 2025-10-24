@@ -1,0 +1,188 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AutoCloudOps Agent - Main Infrastructure Stack",
+  "Parameters": {
+    "ProjectName": {
+      "Type": "String",
+      "Default": "autocloudops-agent",
+      "Description": "Name of the project"
+    },
+    "Environment": {
+      "Type": "String",
+      "Default": "dev",
+      "AllowedValues": ["dev", "staging", "prod"]
+    },
+    "NvidiaApiKey": {
+      "Type": "String",
+      "NoEcho": true,
+      "Description": "NVIDIA NGC API Key"
+    }
+  },
+  "Resources": {
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Sub": "${ProjectName}-${Environment}-data-${AWS::AccountId}"
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        }
+      }
+    },
+    "SecretsManager": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "${ProjectName}-${Environment}-secrets"
+        },
+        "Description": "NVIDIA NIM API keys and configuration",
+        "SecretString": {
+          "Fn::Sub": "{\"nvidia_api_key\":\"${NvidiaApiKey}\"}"
+        }
+      }
+    },
+    "LambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Fn::Sub": "${ProjectName}-${Environment}-lambda-role"
+        },
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        ],
+        "Policies": [
+          {
+            "PolicyName": "AutoCloudOpsPolicy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "secretsmanager:GetSecretValue",
+                    "ssm:SendCommand",
+                    "ssm:GetCommandInvocation",
+                    "cloudwatch:PutMetricData",
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "AgentLambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "${ProjectName}-${Environment}-agent"
+        },
+        "Runtime": "python3.11",
+        "Handler": "lambda_function.lambda_handler",
+        "Role": {
+          "Fn::GetAtt": ["LambdaExecutionRole", "Arn"]
+        },
+        "Code": {
+          "ZipFile": "import json\ndef lambda_handler(event, context):\n    return {'statusCode': 200, 'body': json.dumps('Hello from AutoCloudOps Agent!')}"
+        },
+        "Environment": {
+          "Variables": {
+            "S3_BUCKET": {
+              "Ref": "S3Bucket"
+            },
+            "SECRETS_ARN": {
+              "Ref": "SecretsManager"
+            },
+            "MODE": "DRY_RUN"
+          }
+        },
+        "Timeout": 300
+      }
+    },
+    "EventBridgeRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "${ProjectName}-${Environment}-cloudwatch-alarms"
+        },
+        "Description": "Trigger AutoCloudOps Agent on CloudWatch alarms",
+        "EventPattern": {
+          "source": ["aws.cloudwatch"],
+          "detail-type": ["CloudWatch Alarm State Change"],
+          "detail": {
+            "state": {
+              "value": ["ALARM"]
+            }
+          }
+        },
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Id": "AutoCloudOpsAgentTarget",
+            "Arn": {
+              "Fn::GetAtt": ["AgentLambda", "Arn"]
+            }
+          }
+        ]
+      }
+    },
+    "LambdaInvokePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "AgentLambda"
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": ["EventBridgeRule", "Arn"]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "LambdaFunctionArn": {
+      "Description": "ARN of the AutoCloudOps Agent Lambda function",
+      "Value": {
+        "Fn::GetAtt": ["AgentLambda", "Arn"]
+      }
+    },
+    "S3BucketName": {
+      "Description": "Name of the S3 bucket for data storage",
+      "Value": {
+        "Ref": "S3Bucket"
+      }
+    },
+    "SecretsManagerArn": {
+      "Description": "ARN of the Secrets Manager secret",
+      "Value": {
+        "Ref": "SecretsManager"
+      }
+    }
+  }
+}

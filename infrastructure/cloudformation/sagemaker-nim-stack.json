@@ -1,0 +1,167 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AutoCloudOps Agent - SageMaker + NVIDIA NIM Deployment (~$392/month)",
+  "Parameters": {
+    "NvidiaApiKey": {
+      "Type": "String",
+      "NoEcho": true,
+      "Description": "NVIDIA NGC API Key"
+    },
+    "ModelName": {
+      "Type": "String",
+      "Default": "autocloudops-llama3-nim",
+      "Description": "Name for the SageMaker model"
+    }
+  },
+  "Resources": {
+    "SageMakerExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {"Service": "sagemaker.amazonaws.com"},
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+        ],
+        "Policies": [
+          {
+            "PolicyName": "NIMModelAccess",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:BatchGetImage"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "NIMModelS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Sub": "autocloudops-nim-models-${AWS::AccountId}-${AWS::Region}"
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        }
+      }
+    },
+    "LlamaNIMModel": {
+      "Type": "AWS::SageMaker::Model",
+      "Properties": {
+        "ModelName": {"Ref": "ModelName"},
+        "ExecutionRoleArn": {"Fn::GetAtt": ["SageMakerExecutionRole", "Arn"]},
+        "PrimaryContainer": {
+          "Image": "nvcr.io/nim/meta/llama-3.1-nemotron-70b-instruct:1.0.0",
+          "Environment": {
+            "NGC_API_KEY": {"Ref": "NvidiaApiKey"},
+            "NIM_CACHE_PATH": "/tmp/nim_cache"
+          }
+        }
+      }
+    },
+    "LlamaNIMEndpointConfig": {
+      "Type": "AWS::SageMaker::EndpointConfig",
+      "Properties": {
+        "EndpointConfigName": {
+          "Fn::Sub": "${ModelName}-endpoint-config"
+        },
+        "ProductionVariants": [
+          {
+            "VariantName": "primary",
+            "ModelName": {"Ref": "LlamaNIMModel"},
+            "InitialInstanceCount": 1,
+            "InstanceType": "ml.g4dn.xlarge",
+            "InitialVariantWeight": 1
+          }
+        ]
+      }
+    },
+    "LlamaNIMEndpoint": {
+      "Type": "AWS::SageMaker::Endpoint",
+      "Properties": {
+        "EndpointName": {
+          "Fn::Sub": "${ModelName}-endpoint"
+        },
+        "EndpointConfigName": {"Ref": "LlamaNIMEndpointConfig"}
+      }
+    },
+    "RetrievalNIMModel": {
+      "Type": "AWS::SageMaker::Model",
+      "Properties": {
+        "ModelName": {
+          "Fn::Sub": "${ModelName}-retrieval"
+        },
+        "ExecutionRoleArn": {"Fn::GetAtt": ["SageMakerExecutionRole", "Arn"]},
+        "PrimaryContainer": {
+          "Image": "nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.0",
+          "Environment": {
+            "NGC_API_KEY": {"Ref": "NvidiaApiKey"}
+          }
+        }
+      }
+    },
+    "RetrievalNIMEndpointConfig": {
+      "Type": "AWS::SageMaker::EndpointConfig",
+      "Properties": {
+        "EndpointConfigName": {
+          "Fn::Sub": "${ModelName}-retrieval-endpoint-config"
+        },
+        "ProductionVariants": [
+          {
+            "VariantName": "primary",
+            "ModelName": {"Ref": "RetrievalNIMModel"},
+            "InitialInstanceCount": 1,
+            "InstanceType": "ml.m5.large",
+            "InitialVariantWeight": 1
+          }
+        ]
+      }
+    },
+    "RetrievalNIMEndpoint": {
+      "Type": "AWS::SageMaker::Endpoint",
+      "Properties": {
+        "EndpointName": {
+          "Fn::Sub": "${ModelName}-retrieval-endpoint"
+        },
+        "EndpointConfigName": {"Ref": "RetrievalNIMEndpointConfig"}
+      }
+    }
+  },
+  "Outputs": {
+    "LlamaNIMEndpoint": {
+      "Description": "SageMaker endpoint for Llama-3 NIM",
+      "Value": {"Ref": "LlamaNIMEndpoint"}
+    },
+    "RetrievalNIMEndpoint": {
+      "Description": "SageMaker endpoint for Retrieval NIM",
+      "Value": {"Ref": "RetrievalNIMEndpoint"}
+    },
+    "EstimatedMonthlyCost": {
+      "Description": "Estimated monthly cost",
+      "Value": "$392.46/month (GPU: $380 + Storage: $2.30 + Processing: $10)"
+    }
+  }
+}

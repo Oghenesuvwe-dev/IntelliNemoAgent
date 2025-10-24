@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama3-nim-reasoning
+  namespace: autocloudops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama3-nim
+  template:
+    metadata:
+      labels:
+        app: llama3-nim
+    spec:
+      nodeSelector:
+        nvidia.com/gpu: "true"
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
+      containers:
+      - name: llama3-nim
+        image: nvcr.io/nim/meta/llama-3.1-nemotron-70b-instruct:1.0.0
+        ports:
+        - containerPort: 8000
+        env:
+        - name: NGC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nvidia-secrets
+              key: ngc-api-key
+        resources:
+          requests:
+            nvidia.com/gpu: 1
+            memory: "16Gi"
+            cpu: "4"
+          limits:
+            nvidia.com/gpu: 1
+            memory: "32Gi"
+            cpu: "8"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama3-nim-service
+  namespace: autocloudops
+spec:
+  selector:
+    app: llama3-nim
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: ClusterIP

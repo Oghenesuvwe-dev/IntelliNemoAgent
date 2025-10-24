@@ -1,0 +1,177 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AutoCloudOps Agent - EKS + NVIDIA NIM Deployment (~$655/month)",
+  "Parameters": {
+    "ClusterName": {
+      "Type": "String",
+      "Default": "autocloudops-eks",
+      "Description": "Name of the EKS cluster"
+    },
+    "NvidiaApiKey": {
+      "Type": "String",
+      "NoEcho": true,
+      "Description": "NVIDIA NGC API Key"
+    }
+  },
+  "Resources": {
+    "EKSCluster": {
+      "Type": "AWS::EKS::Cluster",
+      "Properties": {
+        "Name": {"Ref": "ClusterName"},
+        "Version": "1.28",
+        "RoleArn": {"Fn::GetAtt": ["EKSServiceRole", "Arn"]},
+        "ResourcesVpcConfig": {
+          "SubnetIds": [
+            {"Ref": "PrivateSubnet1"},
+            {"Ref": "PrivateSubnet2"},
+            {"Ref": "PublicSubnet1"},
+            {"Ref": "PublicSubnet2"}
+          ]
+        }
+      }
+    },
+    "EKSServiceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {"Service": "eks.amazonaws.com"},
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+        ]
+      }
+    },
+    "GPUNodeGroup": {
+      "Type": "AWS::EKS::Nodegroup",
+      "Properties": {
+        "ClusterName": {"Ref": "EKSCluster"},
+        "NodegroupName": "nvidia-gpu-nodes",
+        "NodeRole": {"Fn::GetAtt": ["NodeInstanceRole", "Arn"]},
+        "InstanceTypes": ["g4dn.xlarge"],
+        "AmiType": "AL2_x86_64_GPU",
+        "ScalingConfig": {
+          "MinSize": 1,
+          "MaxSize": 3,
+          "DesiredSize": 1
+        },
+        "Subnets": [
+          {"Ref": "PrivateSubnet1"},
+          {"Ref": "PrivateSubnet2"}
+        ],
+        "Labels": {
+          "nvidia.com/gpu": "true",
+          "node-type": "gpu"
+        },
+        "Taints": [
+          {
+            "Key": "nvidia.com/gpu",
+            "Value": "true",
+            "Effect": "NO_SCHEDULE"
+          }
+        ]
+      }
+    },
+    "WorkerNodeGroup": {
+      "Type": "AWS::EKS::Nodegroup", 
+      "Properties": {
+        "ClusterName": {"Ref": "EKSCluster"},
+        "NodegroupName": "worker-nodes",
+        "NodeRole": {"Fn::GetAtt": ["NodeInstanceRole", "Arn"]},
+        "InstanceTypes": ["m5.large"],
+        "ScalingConfig": {
+          "MinSize": 2,
+          "MaxSize": 4,
+          "DesiredSize": 2
+        },
+        "Subnets": [
+          {"Ref": "PrivateSubnet1"},
+          {"Ref": "PrivateSubnet2"}
+        ]
+      }
+    },
+    "NodeInstanceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {"Service": "ec2.amazonaws.com"},
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+          "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+          "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+        ]
+      }
+    },
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "EnableDnsHostnames": true,
+        "EnableDnsSupport": true,
+        "Tags": [{"Key": "Name", "Value": "AutoCloudOps-EKS-VPC"}]
+      }
+    },
+    "PublicSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "CidrBlock": "10.0.1.0/24",
+        "AvailabilityZone": {"Fn::Select": [0, {"Fn::GetAZs": ""}]},
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "PublicSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "CidrBlock": "10.0.2.0/24",
+        "AvailabilityZone": {"Fn::Select": [1, {"Fn::GetAZs": ""}]},
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "PrivateSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "CidrBlock": "10.0.3.0/24",
+        "AvailabilityZone": {"Fn::Select": [0, {"Fn::GetAZs": ""}]}
+      }
+    },
+    "PrivateSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "CidrBlock": "10.0.4.0/24",
+        "AvailabilityZone": {"Fn::Select": [1, {"Fn::GetAZs": ""}]}
+      }
+    }
+  },
+  "Outputs": {
+    "ClusterName": {
+      "Description": "EKS Cluster Name",
+      "Value": {"Ref": "EKSCluster"}
+    },
+    "ClusterEndpoint": {
+      "Description": "EKS Cluster Endpoint",
+      "Value": {"Fn::GetAtt": ["EKSCluster", "Endpoint"]}
+    },
+    "EstimatedMonthlyCost": {
+      "Description": "Estimated monthly cost",
+      "Value": "$654.92/month (EKS: $72 + Nodes: $520 + Storage: $8 + Network: $55)"
+    }
+  }
+}

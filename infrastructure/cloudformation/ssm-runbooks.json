@@ -1,0 +1,107 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AutoCloudOps Agent - Systems Manager Runbooks",
+  "Resources": {
+    "ScaleEC2Document": {
+      "Type": "AWS::SSM::Document",
+      "Properties": {
+        "DocumentType": "Automation",
+        "Name": "AutoCloudOps-ScaleEC2",
+        "Content": {
+          "schemaVersion": "0.3",
+          "description": "Scale EC2 Auto Scaling Group",
+          "assumeRole": "{{ AutomationAssumeRole }}",
+          "parameters": {
+            "AutoScalingGroupName": {
+              "type": "String",
+              "description": "Name of the Auto Scaling Group"
+            },
+            "DesiredCapacity": {
+              "type": "Integer",
+              "description": "Desired capacity to set",
+              "default": 2
+            }
+          },
+          "mainSteps": [
+            {
+              "name": "ScaleAutoScalingGroup",
+              "action": "aws:executeAwsApi",
+              "inputs": {
+                "Service": "autoscaling",
+                "Api": "SetDesiredCapacity",
+                "AutoScalingGroupName": "{{ AutoScalingGroupName }}",
+                "DesiredCapacity": "{{ DesiredCapacity }}",
+                "HonorCooldown": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    "RestartServiceDocument": {
+      "Type": "AWS::SSM::Document",
+      "Properties": {
+        "DocumentType": "Command",
+        "Name": "AutoCloudOps-RestartService",
+        "Content": {
+          "schemaVersion": "2.2",
+          "description": "Restart a system service",
+          "parameters": {
+            "ServiceName": {
+              "type": "String",
+              "description": "Name of the service to restart",
+              "default": "httpd"
+            }
+          },
+          "mainSteps": [
+            {
+              "action": "aws:runShellScript",
+              "name": "RestartService",
+              "inputs": {
+                "runCommand": [
+                  "sudo systemctl restart {{ ServiceName }}",
+                  "sudo systemctl status {{ ServiceName }}"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "CleanupLogsDocument": {
+      "Type": "AWS::SSM::Document",
+      "Properties": {
+        "DocumentType": "Command",
+        "Name": "AutoCloudOps-CleanupLogs",
+        "Content": {
+          "schemaVersion": "2.2",
+          "description": "Clean up old log files",
+          "parameters": {
+            "LogPath": {
+              "type": "String",
+              "description": "Path to log directory",
+              "default": "/var/log"
+            },
+            "DaysOld": {
+              "type": "String",
+              "description": "Delete files older than N days",
+              "default": "7"
+            }
+          },
+          "mainSteps": [
+            {
+              "action": "aws:runShellScript",
+              "name": "CleanupLogs",
+              "inputs": {
+                "runCommand": [
+                  "find {{ LogPath }} -name '*.log' -mtime +{{ DaysOld }} -type f -delete",
+                  "df -h {{ LogPath }}"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

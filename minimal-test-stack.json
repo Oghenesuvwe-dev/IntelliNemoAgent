@@ -1,0 +1,117 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AutoCloudOps Agent - Minimal Test Resources (~$15/month)",
+  "Resources": {
+    "TestVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "EnableDnsHostnames": true,
+        "Tags": [{"Key": "Name", "Value": "AutoCloudOps-Test-VPC"}]
+      }
+    },
+    "TestSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {"Ref": "TestVPC"},
+        "CidrBlock": "10.0.1.0/24",
+        "AvailabilityZone": {"Fn::Select": [0, {"Fn::GetAZs": ""}]},
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "TestSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Test security group for AutoCloudOps",
+        "VpcId": {"Ref": "TestVPC"},
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "TestInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": "t3.micro",
+        "ImageId": "ami-0c02fb55956c7d316",
+        "SubnetId": {"Ref": "TestSubnet"},
+        "SecurityGroupIds": [{"Ref": "TestSecurityGroup"}],
+        "Tags": [{"Key": "Name", "Value": "AutoCloudOps-Test-Instance"}],
+        "UserData": {
+          "Fn::Base64": "#!/bin/bash\nyum update -y\nyum install -y httpd\nsystemctl start httpd\nsystemctl enable httpd"
+        }
+      }
+    },
+    "TestAutoScalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AutoScalingGroupName": "autocloudops-test-asg",
+        "LaunchTemplate": {
+          "LaunchTemplateId": {"Ref": "TestLaunchTemplate"},
+          "Version": {"Fn::GetAtt": ["TestLaunchTemplate", "LatestVersionNumber"]}
+        },
+        "MinSize": "1",
+        "MaxSize": "3",
+        "DesiredCapacity": "1",
+        "VPCZoneIdentifier": [{"Ref": "TestSubnet"}],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "AutoCloudOps-ASG-Instance",
+            "PropagateAtLaunch": true
+          }
+        ]
+      }
+    },
+    "TestLaunchTemplate": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {
+        "LaunchTemplateName": "autocloudops-test-template",
+        "LaunchTemplateData": {
+          "InstanceType": "t3.micro",
+          "ImageId": "ami-0c02fb55956c7d316",
+          "SecurityGroupIds": [{"Ref": "TestSecurityGroup"}]
+        }
+      }
+    },
+    "CPUAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": "autocloudops-test-cpu-high",
+        "AlarmDescription": "Test CPU alarm for AutoCloudOps",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": 300,
+        "EvaluationPeriods": 1,
+        "Threshold": 75,
+        "ComparisonOperator": "GreaterThanThreshold",
+        "Dimensions": [
+          {
+            "Name": "InstanceId",
+            "Value": {"Ref": "TestInstance"}
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "TestInstanceId": {
+      "Description": "ID of the test EC2 instance",
+      "Value": {"Ref": "TestInstance"}
+    },
+    "AutoScalingGroupName": {
+      "Description": "Name of the Auto Scaling Group",
+      "Value": {"Ref": "TestAutoScalingGroup"}
+    },
+    "EstimatedMonthlyCost": {
+      "Description": "Estimated monthly cost",
+      "Value": "$8.76 (t3.micro) + $1.00 (alarms) = ~$10/month"
+    }
+  }
+}

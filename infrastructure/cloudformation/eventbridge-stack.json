@@ -1,0 +1,50 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AutoCloudOps Agent - EventBridge Integration",
+  "Parameters": {
+    "LambdaFunctionArn": {
+      "Type": "String",
+      "Description": "ARN of the AutoCloudOps Lambda function"
+    }
+  },
+  "Resources": {
+    "CloudWatchAlarmRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Name": "autocloudops-cloudwatch-alarms",
+        "Description": "Trigger AutoCloudOps on CloudWatch alarms",
+        "EventPattern": {
+          "source": ["aws.cloudwatch"],
+          "detail-type": ["CloudWatch Alarm State Change"],
+          "detail": {
+            "state": {
+              "value": ["ALARM"]
+            }
+          }
+        },
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Id": "AutoCloudOpsTarget",
+            "Arn": {
+              "Ref": "LambdaFunctionArn"
+            }
+          }
+        ]
+      }
+    },
+    "LambdaInvokePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "LambdaFunctionArn"
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": ["CloudWatchAlarmRule", "Arn"]
+        }
+      }
+    }
+  }
+}
