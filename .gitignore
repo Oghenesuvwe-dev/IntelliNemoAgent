@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# AWS
+.aws/
+*.pem
+*.key
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test Results
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Lambda Package
+lambda-deployment.zip
+lambda-code.zip
+*.zip
+
+# Temporary Files
+*.tmp
+*.temp
+result.json
+*_test.json
+test_results_*/
+
+# Documentation Archive (moved to separate folder)
+*ROADMAP*.md
+*ARCHITECTURE*.md
+*ASSESSMENT*.md
+*INVENTORY*.md
+*BRIEF*.md
+*STRATEGY*.md
+*GUIDE*.md
+*DEMO*.md
+*SPEECH*.md

@@ -6,13 +6,13 @@ from datetime import datetime
 
 def lambda_handler(event, context):
     """
-    AutoCloudOps Agent - EKS Integration Handler
+    IntelliNemo Agent - EKS Integration Handler
     Processes CloudWatch alarms using NVIDIA NIM on EKS
     """
     
     # EKS NIM endpoints (internal cluster IPs)
-    LLAMA_NIM_URL = "http://llama3-nim-service.autocloudops.svc.cluster.local:8000/v1/chat/completions"
-    RETRIEVAL_NIM_URL = "http://retrieval-nim-service.autocloudops.svc.cluster.local:8001/v1/embeddings"
+    LLAMA_NIM_URL = "http://llama3-nim-service.intellinemo.svc.cluster.local:8000/v1/chat/completions"
+    RETRIEVAL_NIM_URL = "http://retrieval-nim-service.intellinemo.svc.cluster.local:8001/v1/embeddings"
     
     # Initialize AWS clients
     s3_client = boto3.client('s3')
@@ -47,7 +47,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'AutoCloudOps Agent processed alarm successfully',
+                'message': 'IntelliNemo Agent processed alarm successfully',
                 'alarm': alarm_data['alarm_name'],
                 'action': action['type'],
                 'confidence': action['confidence'],
@@ -196,12 +196,12 @@ def execute_action(ssm_client, action):
     try:
         if action['type'] == 'scale_instance':
             response = ssm_client.start_automation_execution(
-                DocumentName='AutoCloudOps-ScaleEC2',
+                DocumentName='IntelliNemo-ScaleEC2',
                 Parameters=action['parameters']
             )
         elif action['type'] == 'restart_service':
             response = ssm_client.send_command(
-                DocumentName='AutoCloudOps-RestartService',
+                DocumentName='IntelliNemo-RestartService',
                 Parameters=action['parameters']
             )
         else:

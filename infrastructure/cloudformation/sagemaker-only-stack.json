@@ -1,0 +1,214 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "IntelliNemo Agent - SageMaker Only Stack",
+  "Parameters": {
+    "NvidiaApiKey": {
+      "Type": "String",
+      "NoEcho": true,
+      "Description": "NVIDIA NGC API Key"
+    },
+    "ProjectName": {
+      "Type": "String",
+      "Default": "intellinemo-agent",
+      "Description": "Project name"
+    }
+  },
+  "Resources": {
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {"Fn::Sub": "${ProjectName}-data-v2-${AWS::AccountId}"},
+        "VersioningConfiguration": {"Status": "Enabled"},
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        }
+      }
+    },
+    "SecretsManager": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Name": {"Fn::Sub": "${ProjectName}-secrets-v2"},
+        "SecretString": {"Fn::Sub": "{\"nvidia_api_key\":\"${NvidiaApiKey}\"}"}
+      }
+    },
+    "LambdaRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {"Fn::Sub": "${ProjectName}-lambda-role-v2"},
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {"Service": "lambda.amazonaws.com"},
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+          "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+        ],
+        "Policies": [
+          {
+            "PolicyName": "IntelliNemoLambdaPolicy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "secretsmanager:GetSecretValue",
+                    "ssm:SendCommand",
+                    "ssm:StartAutomationExecution",
+                    "cloudwatch:PutMetricData"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "SageMakerRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {"Fn::Sub": "${ProjectName}-sagemaker-role-v2"},
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {"Service": "sagemaker.amazonaws.com"},
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+        ]
+      }
+    },
+    "Nano8BModel": {
+      "Type": "AWS::SageMaker::Model",
+      "Properties": {
+        "ModelName": {"Fn::Sub": "${ProjectName}-nano8b-v2"},
+        "ExecutionRoleArn": {"Fn::GetAtt": ["SageMakerRole", "Arn"]},
+        "PrimaryContainer": {
+          "Image": "nvcr.io/nim/meta/llama-3.1-nemotron-nano-8b-v1:1.0.0",
+          "Environment": {
+            "NGC_API_KEY": {"Ref": "NvidiaApiKey"}
+          }
+        }
+      }
+    },
+    "Nano8BEndpointConfig": {
+      "Type": "AWS::SageMaker::EndpointConfig",
+      "Properties": {
+        "EndpointConfigName": {"Fn::Sub": "${ProjectName}-nano8b-config-v2"},
+        "ProductionVariants": [
+          {
+            "VariantName": "primary",
+            "ModelName": {"Ref": "Nano8BModel"},
+            "InitialInstanceCount": 1,
+            "InstanceType": "ml.g4dn.xlarge",
+            "InitialVariantWeight": 1
+          }
+        ]
+      }
+    },
+    "Nano8BEndpoint": {
+      "Type": "AWS::SageMaker::Endpoint",
+      "Properties": {
+        "EndpointName": {"Fn::Sub": "${ProjectName}-nano8b-endpoint-v2"},
+        "EndpointConfigName": {"Ref": "Nano8BEndpointConfig"}
+      }
+    },
+    "NemoRetrieverModel": {
+      "Type": "AWS::SageMaker::Model",
+      "Properties": {
+        "ModelName": {"Fn::Sub": "${ProjectName}-nemo-retriever-v2"},
+        "ExecutionRoleArn": {"Fn::GetAtt": ["SageMakerRole", "Arn"]},
+        "PrimaryContainer": {
+          "Image": "nvcr.io/nim/nvidia/nemo-retriever:1.0.0",
+          "Environment": {
+            "NGC_API_KEY": {"Ref": "NvidiaApiKey"}
+          }
+        }
+      }
+    },
+    "NemoRetrieverEndpointConfig": {
+      "Type": "AWS::SageMaker::EndpointConfig",
+      "Properties": {
+        "EndpointConfigName": {"Fn::Sub": "${ProjectName}-nemo-retriever-config-v2"},
+        "ProductionVariants": [
+          {
+            "VariantName": "primary",
+            "ModelName": {"Ref": "NemoRetrieverModel"},
+            "InitialInstanceCount": 1,
+            "InstanceType": "ml.m5.xlarge",
+            "InitialVariantWeight": 1
+          }
+        ]
+      }
+    },
+    "NemoRetrieverEndpoint": {
+      "Type": "AWS::SageMaker::Endpoint",
+      "Properties": {
+        "EndpointName": {"Fn::Sub": "${ProjectName}-nemo-retriever-endpoint-v2"},
+        "EndpointConfigName": {"Ref": "NemoRetrieverEndpointConfig"}
+      }
+    },
+    "IntelliNemoLambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {"Fn::Sub": "${ProjectName}-v2"},
+        "Runtime": "python3.11",
+        "Handler": "lambda_function.lambda_handler",
+        "Role": {"Fn::GetAtt": ["LambdaRole", "Arn"]},
+        "Code": {
+          "ZipFile": "import json\ndef lambda_handler(event, context):\n    return {'statusCode': 200, 'body': json.dumps('IntelliNemo SageMaker Agent Ready')}"
+        },
+        "Environment": {
+          "Variables": {
+            "S3_BUCKET": {"Ref": "S3Bucket"},
+            "SECRETS_ARN": {"Ref": "SecretsManager"},
+            "NANO8B_ENDPOINT": {"Ref": "Nano8BEndpoint"},
+            "NEMO_ENDPOINT": {"Ref": "NemoRetrieverEndpoint"},
+            "MODE": "DRY_RUN"
+          }
+        },
+        "Timeout": 900,
+        "MemorySize": 512
+      }
+    }
+  },
+  "Outputs": {
+    "LambdaArn": {
+      "Description": "IntelliNemo Lambda Function ARN",
+      "Value": {"Fn::GetAtt": ["IntelliNemoLambda", "Arn"]}
+    },
+    "S3Bucket": {
+      "Description": "S3 Bucket for data storage",
+      "Value": {"Ref": "S3Bucket"}
+    },
+    "SecretsArn": {
+      "Description": "Secrets Manager ARN",
+      "Value": {"Ref": "SecretsManager"}
+    },
+    "Nano8BEndpoint": {
+      "Description": "Nano-8B SageMaker Endpoint",
+      "Value": {"Ref": "Nano8BEndpoint"}
+    },
+    "NemoRetrieverEndpoint": {
+      "Description": "Nemo Retriever SageMaker Endpoint", 
+      "Value": {"Ref": "NemoRetrieverEndpoint"}
+    }
+  }
+}

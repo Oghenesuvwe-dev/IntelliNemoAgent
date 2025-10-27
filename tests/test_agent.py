@@ -1,7 +1,7 @@
 import json
 import pytest
 import boto3
-from moto import mock_aws
+from moto import mock_cloudwatch, mock_s3, mock_secretsmanager
 from unittest.mock import patch, MagicMock
 import sys
 import os
@@ -10,7 +10,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src', 'lambda'))
 from lambda_function import lambda_handler, extract_alarm_data, generate_action
 
-class TestAutoCloudOpsAgent:
+class TestIntelliNemoAgent:
     
     def test_extract_alarm_data(self):
         """Test alarm data extraction from EventBridge event"""
@@ -50,7 +50,8 @@ class TestAutoCloudOpsAgent:
         assert action['confidence'] == 8
         assert 'scale' in action['description'].lower()
     
-    @mock_aws
+    @mock_s3
+    @mock_secretsmanager
     def test_lambda_handler_dry_run(self):
         """Test Lambda handler in dry run mode"""
         # Setup mock AWS resources
@@ -111,7 +112,7 @@ def create_test_alarm():
     cloudwatch = boto3.client('cloudwatch')
     
     cloudwatch.put_metric_alarm(
-        AlarmName='autocloudops-test-alarm',
+        AlarmName='intellinemo-test-alarm',
         ComparisonOperator='GreaterThanThreshold',
         EvaluationPeriods=1,
         MetricName='CPUUtilization',
@@ -120,20 +121,20 @@ def create_test_alarm():
         Statistic='Average',
         Threshold=80.0,
         ActionsEnabled=True,
-        AlarmDescription='Test alarm for AutoCloudOps Agent',
+        AlarmDescription='Test alarm for IntelliNemo Agent',
         Unit='Percent'
     )
     
-    print("✅ Test alarm created: autocloudops-test-alarm")
+    print("✅ Test alarm created: intellinemo-test-alarm")
 
 def trigger_test_alarm():
     """Helper function to trigger the test alarm"""
     cloudwatch = boto3.client('cloudwatch')
     
     cloudwatch.set_alarm_state(
-        AlarmName='autocloudops-test-alarm',
+        AlarmName='intellinemo-test-alarm',
         StateValue='ALARM',
-        StateReason='Testing AutoCloudOps Agent functionality'
+        StateReason='Testing IntelliNemo Agent functionality'
     )
     
     print("🚨 Test alarm triggered")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AutoCloudOps Agent - AWS × NVIDIA Hackathon Demo
+IntelliNemo Agent - AWS × NVIDIA Hackathon Demo
 Demonstrates full AI-powered SRE automation capabilities
 """
 
@@ -13,7 +13,7 @@ def hackathon_demo():
     """Complete hackathon demonstration"""
     
     print("🏆 AWS × NVIDIA Agentic AI Hackathon")
-    print("🤖 AutoCloudOps Agent - Intelligent SRE Co-Pilot")
+    print("🤖 IntelliNemo Agent - Intelligent SRE Co-Pilot")
     print("=" * 60)
     
     # Simulate critical production scenarios
@@ -88,9 +88,9 @@ def hackathon_demo():
         print(f"   Issue: {scenario['alarm']['detail']['state']['reason']}")
         
         try:
-            # Invoke AutoCloudOps Agent
+            # Invoke IntelliNemo Agent
             response = lambda_client.invoke(
-                FunctionName='autocloudops-agent',
+                FunctionName='intellinemo-agent',
                 Payload=json.dumps(scenario['alarm'])
             )
             
@@ -159,7 +159,7 @@ def hackathon_demo():
     print("   🔹 SageMaker: Managed ML endpoints ($392/month)")
     
     print("\n🎉 HACKATHON DEMO COMPLETE!")
-    print("🏆 AutoCloudOps Agent: From Alert to Action — Instantly, Intelligently")
+    print("🏆 IntelliNemo Agent: From Alert to Action — Instantly, Intelligently")
 
 def show_logs():
     """Show recent processing logs from S3"""
@@ -168,7 +168,7 @@ def show_logs():
     
     try:
         s3_client = boto3.client('s3')
-        bucket = 'autocloudops-agent-442042519962-us-east-1'
+        bucket = 'intellinemo-agent-442042519962-us-east-1'
         
         response = s3_client.list_objects_v2(
             Bucket=bucket,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AutoCloudOps Agent Demo
+IntelliNemo Agent Demo
 Demonstrates the AI-powered SRE automation system
 """
 
@@ -8,10 +8,10 @@ import json
 import boto3
 from datetime import datetime
 
-def demo_autocloudops_agent():
-    """Demonstrate the AutoCloudOps Agent functionality"""
+def demo_intellinemo_agent():
+    """Demonstrate the IntelliNemo Agent functionality"""
     
-    print("🚀 AutoCloudOps Agent Demo")
+    print("🚀 IntelliNemo Agent Demo")
     print("=" * 50)
     
     # Simulate CloudWatch alarm event
@@ -40,7 +40,7 @@ def demo_autocloudops_agent():
     
     try:
         response = lambda_client.invoke(
-            FunctionName='autocloudops-agent',
+            FunctionName='intellinemo-agent',
             Payload=json.dumps(test_event)
         )
         
@@ -73,4 +73,4 @@ def demo_autocloudops_agent():
     print("4. Switch to ACTIVE mode for auto-remediation")
 
 if __name__ == "__main__":
-    demo_autocloudops_agent()
+    demo_intellinemo_agent()

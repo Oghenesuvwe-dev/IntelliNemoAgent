@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Enhanced AutoCloudOps Agent Deployment
+# Enhanced IntelliNemo Agent Deployment
 set -e
 
-PROJECT_NAME="autocloudops-agent"
+PROJECT_NAME="intellinemo-agent"
 REGION="us-east-1"
 
-echo "🚀 Deploying Enhanced AutoCloudOps Agent..."
+echo "🚀 Deploying Enhanced IntelliNemo Agent..."
 
 # Get Lambda function ARN
-LAMBDA_ARN=$(aws lambda get-function --function-name autocloudops-agent --query 'Configuration.FunctionArn' --output text)
+LAMBDA_ARN=$(aws lambda get-function --function-name intellinemo-agent --query 'Configuration.FunctionArn' --output text)
 echo "📋 Lambda ARN: $LAMBDA_ARN"
 
 # Deploy SSM runbooks
@@ -31,21 +31,21 @@ aws cloudformation deploy \
 echo "🔄 Updating Lambda function..."
 cd lambda-package && rm -f lambda_function.py && cp ../src/lambda/lambda_function.py . && zip -r ../lambda-enhanced.zip . && cd ..
 aws lambda update-function-code \
-    --function-name autocloudops-agent \
+    --function-name intellinemo-agent \
     --zip-file fileb://lambda-enhanced.zip \
     --region ${REGION}
 
 # Update Lambda permissions for SSM
 echo "🔐 Updating Lambda permissions..."
 aws iam attach-role-policy \
-    --role-name $(aws lambda get-function --function-name autocloudops-agent --query 'Configuration.Role' --output text | cut -d'/' -f2) \
+    --role-name $(aws lambda get-function --function-name intellinemo-agent --query 'Configuration.Role' --output text | cut -d'/' -f2) \
     --policy-arn arn:aws:iam::aws:policy/AmazonSSMFullAccess
 
 echo "✅ Enhanced deployment completed!"
 echo ""
 echo "🧪 Test with real CloudWatch alarm:"
-echo "aws cloudwatch put-metric-alarm --alarm-name autocloudops-test --alarm-description 'Test' --metric-name CPUUtilization --namespace AWS/EC2 --statistic Average --period 300 --threshold 80 --comparison-operator GreaterThanThreshold --evaluation-periods 1 --alarm-actions arn:aws:sns:${REGION}:$(aws sts get-caller-identity --query Account --output text):autocloudops-notifications"
+echo "aws cloudwatch put-metric-alarm --alarm-name intellinemo-test --alarm-description 'Test' --metric-name CPUUtilization --namespace AWS/EC2 --statistic Average --period 300 --threshold 80 --comparison-operator GreaterThanThreshold --evaluation-periods 1 --alarm-actions arn:aws:sns:${REGION}:$(aws sts get-caller-identity --query Account --output text):intellinemo-notifications"
 echo ""
-echo "aws cloudwatch set-alarm-state --alarm-name autocloudops-test --state-value ALARM --state-reason 'Testing enhanced AutoCloudOps'"
+echo "aws cloudwatch set-alarm-state --alarm-name intellinemo-test --state-value ALARM --state-reason 'Testing enhanced IntelliNemo'"
 
 rm -f lambda-enhanced.zip

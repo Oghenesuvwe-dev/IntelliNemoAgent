@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# AutoCloudOps Agent - SageMaker + NVIDIA NIM Deployment
+# IntelliNemo Agent - SageMaker + NVIDIA NIM Deployment
 set -e
 
-PROJECT_NAME="autocloudops-agent"
+PROJECT_NAME="intellinemo-agent"
 REGION="us-east-1"
 
-echo "🚀 Deploying AutoCloudOps Agent with SageMaker + NVIDIA NIM"
+echo "🚀 Deploying IntelliNemo Agent with SageMaker + NVIDIA NIM"
 echo "💰 Estimated cost: $392.46/month"
 echo ""
 
@@ -23,7 +23,7 @@ aws cloudformation deploy \
     --stack-name ${PROJECT_NAME}-sagemaker \
     --parameter-overrides \
         NvidiaApiKey=${NVIDIA_API_KEY} \
-        ModelName=autocloudops-llama3-nim \
+        ModelName=intellinemo-llama3-nim \
     --capabilities CAPABILITY_IAM \
     --region ${REGION}
 
@@ -51,7 +51,7 @@ from datetime import datetime
 
 def lambda_handler(event, context):
     """
-    AutoCloudOps Agent - SageMaker Integration Handler
+    IntelliNemo Agent - SageMaker Integration Handler
     """
     
     # SageMaker endpoints
@@ -85,7 +85,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'AutoCloudOps Agent processed alarm successfully',
+                'message': 'IntelliNemo Agent processed alarm successfully',
                 'alarm': alarm_data['alarm_name'],
                 'action': action['type'],
                 'confidence': action['confidence'],
@@ -153,7 +153,7 @@ def process_with_sagemaker(alarm_data, context, endpoint_name, sagemaker_runtime
         """
         
         payload = {
-            "model": "meta/llama-3.1-nemotron-70b-instruct",
+            "model": "meta/llama-3.1-nemotron-nano-8b-v1",
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 300,
             "temperature": 0.1
@@ -245,18 +245,18 @@ zip -r ../../lambda-sagemaker.zip sagemaker_lambda_function.py
 cd ../..
 
 aws lambda update-function-code \
-    --function-name autocloudops-agent \
+    --function-name intellinemo-agent \
     --zip-file fileb://lambda-sagemaker.zip \
     --region ${REGION}
 
 aws lambda update-function-configuration \
-    --function-name autocloudops-agent \
+    --function-name intellinemo-agent \
     --handler sagemaker_lambda_function.lambda_handler \
     --region ${REGION}
 
 # Add SageMaker permissions to Lambda role
 echo "🔐 Adding SageMaker permissions..."
-LAMBDA_ROLE=$(aws lambda get-function --function-name autocloudops-agent --query 'Configuration.Role' --output text | cut -d'/' -f2)
+LAMBDA_ROLE=$(aws lambda get-function --function-name intellinemo-agent --query 'Configuration.Role' --output text | cut -d'/' -f2)
 
 aws iam attach-role-policy \
     --role-name ${LAMBDA_ROLE} \

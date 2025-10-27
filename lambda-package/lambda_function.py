@@ -6,7 +6,7 @@ from datetime import datetime
 
 def lambda_handler(event, context):
     """
-    AutoCloudOps Agent Lambda Handler
+    IntelliNemo Agent Lambda Handler
     Processes CloudWatch alarms and executes AI-driven remediation
     """
     
@@ -45,7 +45,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'AutoCloudOps Agent processed alarm successfully',
+                'message': 'IntelliNemo Agent processed alarm successfully',
                 'alarm': alarm_data['alarm_name'],
                 'action': action['type'],
                 'mode': mode
@@ -209,7 +209,7 @@ def execute_action(ssm_client, action):
         response = ssm_client.send_command(
             DocumentName='AWS-RunShellScript',
             Parameters={'commands': [action['command']]},
-            Comment=f"AutoCloudOps remediation: {action['description']}"
+            Comment=f"IntelliNemo remediation: {action['description']}"
         )
         
         command_id = response['Command']['CommandId']

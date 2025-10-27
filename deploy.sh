@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# AutoCloudOps Agent Deployment Script
+# IntelliNemo Agent Deployment Script
 set -e
 
-PROJECT_NAME="autocloudops-agent"
+PROJECT_NAME="intellinemo-agent"
 ENVIRONMENT="dev"
 REGION="us-east-1"
 
-echo "🚀 Deploying AutoCloudOps Agent..."
+echo "🚀 Deploying IntelliNemo Agent..."
 
 # Check if NVIDIA API key is provided
 if [ -z "$NVIDIA_API_KEY" ]; then
@@ -65,7 +65,7 @@ echo "1. Create a test CloudWatch alarm:"
 echo "   aws cloudwatch put-metric-alarm --alarm-name test-cpu-alarm --alarm-description 'Test alarm' --metric-name CPUUtilization --namespace AWS/EC2 --statistic Average --period 300 --threshold 80 --comparison-operator GreaterThanThreshold --evaluation-periods 1"
 echo ""
 echo "2. Trigger the alarm:"
-echo "   aws cloudwatch set-alarm-state --alarm-name test-cpu-alarm --state-value ALARM --state-reason 'Testing AutoCloudOps Agent'"
+echo "   aws cloudwatch set-alarm-state --alarm-name test-cpu-alarm --state-value ALARM --state-reason 'Testing IntelliNemo Agent'"
 echo ""
 echo "3. Check Lambda logs:"
 echo "   aws logs tail /aws/lambda/${FUNCTION_NAME} --follow"

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AutoCloudOps Agent - Comprehensive Test Scenarios
+IntelliNemo Agent - Comprehensive Test Scenarios
 """
 
 import json
@@ -70,7 +70,7 @@ def test_scenarios():
     
     lambda_client = boto3.client('lambda')
     
-    print("🧪 Testing AutoCloudOps Agent Scenarios")
+    print("🧪 Testing IntelliNemo Agent Scenarios")
     print("=" * 50)
     
     for scenario in scenarios:
@@ -78,7 +78,7 @@ def test_scenarios():
         
         try:
             response = lambda_client.invoke(
-                FunctionName='autocloudops-agent',
+                FunctionName='autocloudops-agent-dev-agent',
                 Payload=json.dumps(scenario['alarm'])
             )
             

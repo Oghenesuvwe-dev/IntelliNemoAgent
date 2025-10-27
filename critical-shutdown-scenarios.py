@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Critical Service Shutdown Scenarios for AutoCloudOps Agent
+Critical Service Shutdown Scenarios for IntelliNemo Agent
 """
 
 critical_scenarios = [

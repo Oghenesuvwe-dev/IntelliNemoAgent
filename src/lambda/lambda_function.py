@@ -6,7 +6,7 @@ from datetime import datetime
 
 def lambda_handler(event, context):
     """
-    AutoCloudOps Agent Lambda Handler
+    IntelliNemo Agent Lambda Handler
     Processes CloudWatch alarms and executes AI-driven remediation
     """
     
@@ -45,7 +45,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'AutoCloudOps Agent processed alarm successfully',
+                'message': 'IntelliNemo Agent processed alarm successfully',
                 'alarm': alarm_data['alarm_name'],
                 'action': action['type'],
                 'mode': mode
@@ -215,9 +215,9 @@ def execute_action(ssm_client, action):
     try:
         # Map action types to SSM documents
         document_map = {
-            'scale_instance': 'AutoCloudOps-ScaleEC2',
-            'restart_service': 'AutoCloudOps-RestartService', 
-            'cleanup_logs': 'AutoCloudOps-CleanupLogs'
+            'scale_instance': 'IntelliNemo-ScaleEC2',
+            'restart_service': 'IntelliNemo-RestartService', 
+            'cleanup_logs': 'IntelliNemo-CleanupLogs'
         }
         
         document_name = document_map.get(action['type'], 'AWS-RunShellScript')
@@ -226,7 +226,7 @@ def execute_action(ssm_client, action):
             response = ssm_client.send_command(
                 DocumentName=document_name,
                 Parameters={'commands': [action['command']]},
-                Comment=f"AutoCloudOps: {action['description']}"
+                Comment=f"IntelliNemo: {action['description']}"
             )
         else:
             # Use custom runbook

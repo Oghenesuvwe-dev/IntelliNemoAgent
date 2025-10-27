@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# AutoCloudOps Agent - EKS + NVIDIA NIM Deployment
+# IntelliNemo Agent - EKS + NVIDIA NIM Deployment
 set -e
 
-PROJECT_NAME="autocloudops-agent"
-CLUSTER_NAME="autocloudops-eks"
+PROJECT_NAME="intellinemo-agent"
+CLUSTER_NAME="intellinemo-eks"
 REGION="us-east-1"
 
-echo "🚀 Deploying AutoCloudOps Agent with EKS + NVIDIA NIM"
+echo "🚀 Deploying IntelliNemo Agent with EKS + NVIDIA NIM"
 echo "💰 Estimated cost: $654.92/month"
 echo ""
 
@@ -34,13 +34,13 @@ aws eks update-kubeconfig --region ${REGION} --name ${CLUSTER_NAME}
 
 # Create namespace
 echo "📦 Creating Kubernetes namespace..."
-kubectl create namespace autocloudops --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace intellinemo --dry-run=client -o yaml | kubectl apply -f -
 
 # Create NVIDIA secrets
 echo "🔐 Creating NVIDIA secrets..."
 kubectl create secret generic nvidia-secrets \
     --from-literal=ngc-api-key=${NVIDIA_API_KEY} \
-    --namespace=autocloudops \
+    --namespace=intellinemo \
     --dry-run=client -o yaml | kubectl apply -f -
 
 # Install NVIDIA device plugin
@@ -54,8 +54,8 @@ kubectl apply -f src/nim-deployments/retrieval-nim-deployment.yaml
 
 # Wait for deployments
 echo "⏳ Waiting for NIM services to be ready..."
-kubectl wait --for=condition=available --timeout=600s deployment/llama3-nim-reasoning -n autocloudops
-kubectl wait --for=condition=available --timeout=300s deployment/retrieval-nim-embedding -n autocloudops
+kubectl wait --for=condition=available --timeout=600s deployment/llama3-nim-reasoning -n intellinemo
+kubectl wait --for=condition=available --timeout=300s deployment/retrieval-nim-embedding -n intellinemo
 
 # Update Lambda function
 echo "🔄 Updating Lambda function for EKS integration..."
@@ -64,19 +64,19 @@ zip -r ../../lambda-eks.zip eks_lambda_function.py
 cd ../..
 
 aws lambda update-function-code \
-    --function-name autocloudops-agent \
+    --function-name intellinemo-agent \
     --zip-file fileb://lambda-eks.zip \
     --region ${REGION}
 
 aws lambda update-function-configuration \
-    --function-name autocloudops-agent \
+    --function-name intellinemo-agent \
     --handler eks_lambda_function.lambda_handler \
     --region ${REGION}
 
 # Test deployment
 echo "🧪 Testing EKS + NIM deployment..."
-kubectl get pods -n autocloudops
-kubectl get services -n autocloudops
+kubectl get pods -n intellinemo
+kubectl get services -n intellinemo
 
 echo ""
 echo "✅ EKS + NVIDIA NIM deployment completed!"
