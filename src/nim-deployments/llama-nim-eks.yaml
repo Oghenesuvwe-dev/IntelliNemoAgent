@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-nim
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama-nim
+  template:
+    metadata:
+      labels:
+        app: llama-nim
+    spec:
+      imagePullSecrets:
+      - name: ngc-secret
+      containers:
+      - name: llama-nim
+        image: nginx:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: NGC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nvidia-api-key
+              key: api-key
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-nim-service
+spec:
+  selector:
+    app: llama-nim
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nvidia-api-key
+type: Opaque
+stringData:
+  api-key: "MmxtdHJyaTNpN2JnZTVuaTNuNThqbzVuOHY6ZTUyNjBhNGYtOGY1MC00ZTc2LWFjMzktNzUxODliYTM5ZTNh"

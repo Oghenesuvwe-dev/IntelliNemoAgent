@@ -78,8 +78,10 @@
           "Environment": {
             "NGC_API_KEY": {"Ref": "NvidiaApiKey"},
             "NIM_CACHE_PATH": "/tmp/nim_cache"
-          }
-        }
+          },
+          "Mode": "SingleModel"
+        },
+        "EnableNetworkIsolation": false
       }
     },
     "LlamaNIMEndpointConfig": {
@@ -119,8 +121,10 @@
           "Image": "nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.0",
           "Environment": {
             "NGC_API_KEY": {"Ref": "NvidiaApiKey"}
-          }
-        }
+          },
+          "Mode": "SingleModel"
+        },
+        "EnableNetworkIsolation": false
       }
     },
     "RetrievalNIMEndpointConfig": {

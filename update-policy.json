@@ -1,0 +1,56 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Update Synapseproject policy with SageMaker permissions",
+  "Resources": {
+    "UpdatedSynapsePolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "ManagedPolicyName": "Synapseproject",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "cloudformation:*",
+                "iam:*",
+                "lambda:*",
+                "apigateway:*",
+                "s3:*",
+                "bedrock:*",
+                "secretsmanager:*",
+                "logs:*",
+                "ses:*",
+                "aws-marketplace:ViewSubscriptions",
+                "aws-marketplace:Subscribe",
+                "qdeveloper:*",
+                "access-analyzer:*",
+                "cloudwatch:*",
+                "aws-portal:ViewAccount",
+                "aws-portal:ViewBilling",
+                "aws-portal:ViewUsage",
+                "ce:GetCostAndUsage",
+                "ce:GetCostForecast",
+                "budgets:ViewBudget",
+                "servicecatalog:ListApplications",
+                "events:*",
+                "ssm:*",
+                "sagemaker:*",
+                "ec2:DescribeVpcs",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeSecurityGroups",
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+                "application-autoscaling:*",
+                "sts:GetCallerIdentity"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

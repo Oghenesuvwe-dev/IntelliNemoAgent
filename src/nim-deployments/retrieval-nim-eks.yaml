@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retrieval-nim
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: retrieval-nim
+  template:
+    metadata:
+      labels:
+        app: retrieval-nim
+    spec:
+      imagePullSecrets:
+      - name: ngc-secret
+      containers:
+      - name: retrieval-nim
+        image: nginx:latest
+        ports:
+        - containerPort: 8001
+        env:
+        - name: NGC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nvidia-api-key
+              key: api-key
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: retrieval-nim-service
+spec:
+  selector:
+    app: retrieval-nim
+  ports:
+  - port: 8001
+    targetPort: 8001
+  type: ClusterIP
