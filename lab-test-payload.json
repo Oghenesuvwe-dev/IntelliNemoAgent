@@ -1,0 +1,24 @@
+{
+  "detail": {
+    "alarmName": "prod-api-response-time-critical",
+    "state": {
+      "value": "ALARM",
+      "reason": "API response time exceeded 5 seconds for 5 consecutive minutes",
+      "timestamp": "2024-01-15T10:30:00Z"
+    },
+    "configuration": {
+      "metricName": "ResponseTime",
+      "namespace": "AWS/ApplicationELB",
+      "threshold": 5000,
+      "comparisonOperator": "GreaterThanThreshold",
+      "evaluationPeriods": 5,
+      "period": 60
+    },
+    "metric": {
+      "dimensions": {
+        "LoadBalancer": "prod-api-alb",
+        "TargetGroup": "prod-api-targets"
+      }
+    }
+  }
+}
